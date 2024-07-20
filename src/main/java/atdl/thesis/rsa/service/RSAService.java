@@ -5,7 +5,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +16,8 @@ import java.util.List;
 
 @Service
 public class RSAService {
+
+    private Charset charSet = StandardCharsets.ISO_8859_1;
 
     public RSAKeyPair generateKey() {
 
@@ -99,95 +103,15 @@ public class RSAService {
         return new String(decryptedMessageBytes, StandardCharsets.UTF_8);
     }
 
-
     public byte[] encryptFile(byte[] messageBytes, String publicKeyPair) {
-        BigInteger publicKey = new BigInteger(publicKeyPair.split("\\.")[0]);
-        BigInteger modulus = new BigInteger(publicKeyPair.split("\\.")[1]);
-
-        int chunkSize = modulus.bitLength() / 8 - 11; // RSA encryption padding
-        int numChunks = (int) Math.ceil((double) messageBytes.length / chunkSize);
-
-        List<byte[]> encryptedChunks = new ArrayList<>();
-
-        for (int i = 0; i < numChunks; i++) {
-            int start = i * chunkSize;
-            int length = Math.min(chunkSize, messageBytes.length - start);
-
-            byte[] chunk = new byte[length];
-            System.arraycopy(messageBytes, start, chunk, 0, length);
-
-            BigInteger chunkBigInt = new BigInteger(1, chunk);
-            BigInteger encryptedChunk = encrypt(chunkBigInt, publicKey, modulus);
-
-            encryptedChunks.add(encryptedChunk.toByteArray());
-        }
-
-        // Convert encrypted chunks to a single byte array with Base64 encoding
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        Base64.Encoder encoder = Base64.getEncoder();
-
-        for (byte[] chunk : encryptedChunks) {
-            byte[] encodedChunk = encoder.encode(chunk);
-            try {
-                byteStream.write(encodedChunk);
-                byteStream.write(',');
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return byteStream.toByteArray();
+        String message = encryptMessage(bytesToHex(messageBytes), publicKeyPair);
+        return message.getBytes(charSet);
     }
-
 
     public byte[] decryptFile(byte[] encryptedFileBytes, String privateKeyPair) {
-        BigInteger privateKey = new BigInteger(privateKeyPair.split("\\.")[0]);
-        BigInteger modulus = new BigInteger(privateKeyPair.split("\\.")[1]);
-
-        String encryptedFileString = new String(encryptedFileBytes, StandardCharsets.UTF_8);
-        String[] encryptedChunks = encryptedFileString.split(",");
-
-        List<byte[]> decryptedChunks = new ArrayList<>();
-
-        for (String chunk : encryptedChunks) {
-            if (!chunk.isEmpty()) { // Ensure chunk is not empty
-                byte[] chunkBytes = Base64.getDecoder().decode(chunk);
-                BigInteger encryptedChunk = new BigInteger(1, chunkBytes);
-                BigInteger decryptedChunk = decrypt(encryptedChunk, privateKey, modulus);
-
-                byte[] decryptedChunkBytes = decryptedChunk.toByteArray();
-                // Remove leading zero byte if exists (BigInteger adds it to ensure positive number)
-                if (decryptedChunkBytes[0] == 0) {
-                    decryptedChunkBytes = java.util.Arrays.copyOfRange(decryptedChunkBytes, 1, decryptedChunkBytes.length);
-                }
-
-                decryptedChunks.add(decryptedChunkBytes);
-            }
-        }
-
-        // Combine decrypted chunks into a single byte array
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        for (byte[] chunk : decryptedChunks) {
-            try {
-                byteStream.write(chunk);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        return byteStream.toByteArray();
+        String message = decryptMessage(new String(encryptedFileBytes, charSet), privateKeyPair);
+        return hexToBytes(message);
     }
-
-
-//    public byte[] encryptFile(byte[] messageBytes, String publicKeyPair) {
-//        return encryptMessage(new String(messageBytes, StandardCharsets.UTF_16LE), publicKeyPair).getBytes(StandardCharsets.UTF_16LE);
-//    }
-//
-//
-//    public byte[] decryptFile(byte[] encryptedFileBytes, String privateKeyPair) {
-//        return encryptMessage(new String(encryptedFileBytes, StandardCharsets.UTF_16LE), privateKeyPair).getBytes(StandardCharsets.UTF_16LE);
-//    }
-
 
     public static BigInteger encrypt(BigInteger message, BigInteger e, BigInteger n) {
         return message.modPow(e, n);
@@ -195,6 +119,25 @@ public class RSAService {
 
     public static BigInteger decrypt(BigInteger encrypted, BigInteger d, BigInteger n) {
         return encrypted.modPow(d, n);
+    }
+
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : bytes) {
+            hexString.append(String.format("%02X", b));
+        }
+        return hexString.toString();
+    }
+
+    // Convert hexadecimal string to byte[]
+    public static byte[] hexToBytes(String hexString) {
+        int len = hexString.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hexString.charAt(i), 16) << 4)
+                    + Character.digit(hexString.charAt(i+1), 16));
+        }
+        return data;
     }
 
 }
