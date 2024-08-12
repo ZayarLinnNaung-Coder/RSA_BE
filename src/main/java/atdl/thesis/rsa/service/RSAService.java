@@ -34,15 +34,16 @@ public class RSAService {
         // Calculate d
         d = e.modInverse(phi);
 
-        return RSAKeyPair.builder()
-                .publicKey(e + "." + n)
-                .privateKey(d + "." + n)
-                .build();
+        RSAKeyPair pair = new RSAKeyPair();
+        pair.setPublicKey(e + "." + n);
+        pair.setPrivateKey(d + "." + n);
+
+        return pair;
     }
 
     public String encryptMessage(String message, String publicKeyPair) {
 
-        BigInteger publicKey = new BigInteger(publicKeyPair.split("\\.")[0]);
+        BigInteger publicKey = new  BigInteger(publicKeyPair.split("\\.")[0]);
         BigInteger modulus = new BigInteger(publicKeyPair.split("\\.")[1]);
 
         byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
@@ -139,5 +140,7 @@ public class RSAService {
         }
         return data;
     }
+
+
 
 }
