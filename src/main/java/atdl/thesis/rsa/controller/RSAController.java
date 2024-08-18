@@ -3,6 +3,7 @@ package atdl.thesis.rsa.controller;
 import atdl.thesis.rsa.model.RSAKeyPair;
 import atdl.thesis.rsa.model.RSAResponse;
 import atdl.thesis.rsa.service.RSAService;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,14 +14,11 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/rsa")
+@AllArgsConstructor
 @CrossOrigin
 public class RSAController {
 
     private final RSAService rsaService;
-
-    public RSAController(RSAService rsaService) {
-        this.rsaService = rsaService;
-    }
 
     @GetMapping("/generate-key")
     ResponseEntity<RSAKeyPair> generateKey(){
